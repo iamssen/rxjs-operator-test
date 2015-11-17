@@ -1,0 +1,12 @@
+{
+  "name": "rsjx",
+  "scripts": {
+    "test": "tsc && mocha -f 'retry'"
+  },
+  "dependencies": {
+    "@reactivex/rxjs": "^5.0.0-alpha.10",
+    "chai": "^3.4.1",
+    "colors": "^1.1.2",
+    "rsvp": "^3.1.0"
+  }
+}
