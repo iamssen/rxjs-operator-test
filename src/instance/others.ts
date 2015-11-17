@@ -1,8 +1,8 @@
-import {Observable, Scheduler, ConnectableObservable} from '@reactivex/rxjs/dist/cjs/Rx';
+import {Observable, Scheduler, ConnectableObservable, Subject} from '@reactivex/rxjs/dist/cjs/Rx';
 import {GroupedObservable} from "@reactivex/rxjs/dist/cjs/operators/groupBy-support";
 import {Observer} from "@reactivex/rxjs/dist/cjs/Observer";
 import {EventEmitter} from 'events';
-import {subscribe} from '../subscribers';
+import {subscribe, subscribeSubject} from '../subscribers';
 
 describe('Work', () => {
 	// Observable.combineAll
@@ -15,7 +15,6 @@ describe('Work', () => {
 	// Observable.mergeAll
 	// Observable.zip
 	// Observable.zipAll
-
 
 	// Observable.catch
 	// Observable.finally
@@ -319,19 +318,191 @@ describe('Work', () => {
 	});
 
 	// Observable.retryWhen
+
 	// Observable.sampleTime
+	it('sampleTime', (done) => {
+		// TODO 용도를 모르겠다. 작동도 안된다
+		let source:Observable<number> = Observable.of(1, 2, 3)
+			.sampleTime(1000);
+
+		subscribe(done, source);
+	})
+
 	// Observable.subscribeOn
+
 	// Observable.switch
+	it('switch', (done) => {
+		// TODO 기능을 이해를 못하겠다
+		let source1:Observable<number> = Observable.interval(300).take(4);
+		let source2:Observable<string> = Observable.interval(1000).take(3).map<string>(x => String.fromCharCode('A'.charCodeAt(0) + x));
+		/*
+		 Next 0 ← Number at 308:308
+		 Next 1 ← Number at 305:613
+		 Next 2 ← Number at 305:918
+		 Next 3 ← Number at 306:1224
+		 */
+
+		//let source1:Observable<number> = Observable.of(1, 2, 3);
+		//let source2:Observable<string> = Observable.of('a', 'b', 'c');
+		/*
+		 Next a ← String at 1:1
+		 Next b ← String at 0:1
+		 Next c ← String at 0:1
+		 Next 1 ← Number at 1:2
+		 Next 2 ← Number at 0:2
+		 Next 3 ← Number at 0:2
+		 */
+
+		subscribe(done,
+			Observable.of<any>(source2, source1)
+				.switch()
+		)
+	})
+
 	// Observable.switchMap
 	// Observable.switchMapTo
+
 	// Observable.throttle
+	it('throttle', (done) => {
+		// TODO 뭔가 작동이 이상... 리포지토리에는 throttle(func) 인데, throttleTime() 인것 같음
+		interface ThrottleItem {
+			value: number;
+			time: number;
+		}
+
+		var times:ThrottleItem[] = [
+			{value: 0, time: 100},
+			{value: 1, time: 600},
+			{value: 2, time: 400},
+			{value: 3, time: 900},
+			{value: 4, time: 200},
+			{value: 5, time: 1800}
+		];
+
+		subscribe(done,
+			Observable.from(times)
+				.flatMap((item:ThrottleItem) => {
+					return Observable.of(item.value).delay(item.time);
+				})
+				.throttle(300)
+		);
+	});
+
 	// Observable.timeout
+	it('timeout', (done) => {
+		// 작동에 Timeout을 건다
+		// 특정 시간을 넘어가면 작동을 취소시킨다
+		subscribe(done,
+			Observable.of(42)
+				.delay(5000)
+				.timeout(200, new Error('Timeout!!!'))
+		);
+	});
+
 	// Observable.timeoutWith
+	it('timeoutWith', (done) => {
+		// 작동에 Timeout을 건다
+		// 특정 시간을 넘어가면 작동을 취소시키고, 대체값을 보낸다
+		// 원래 timeout()과 하나였는데 분리시킨듯...
+		subscribe(done,
+			Observable.of(42)
+				.delay(5000)
+				.timeoutWith(300, Observable.of(99))
+		);
+	})
+
 	// Observable.toArray
+	it('toArray', (done) => {
+		// Observable로 시간상 나뉘어져 있는 값들을
+		// 한 방에 모아서 Array로 전환시킨다
+		subscribe(done,
+			Observable.timer(0, 1000)
+				.take(5)
+				.toArray() // Observable<T[]>
+		);
+	});
+
 	// Observable.toPromise
+	it('toPromise', (done) => {
+		// Observable을 Promise로 전환시킨다
+		// 1, 2 를 집어넣으면 마지막 2만 출력되는걸로 봐서, 마지막 값만 취급하는듯?
+		// 혹은 Promise가 Single Value만 취급하기 때문에
+		// 잘라서 마지막만 가져가는 것 일지도...
+		Observable.of(5)
+			.delay(5000)
+			.toPromise(Promise)
+			.then((value) => {
+				console.log(value);
+				done();
+			});
+	});
+
 	// Observable.window
+	//it('window', (done) => {
+	//	// 기능 자체는 타임아웃에 의해서 특정 아이템들을 Observable<T[]> 로 전환시키는 것 같은데...
+	//	// TODO ???? 뭐가 제대로 안됨
+	//	subscribe(done,
+	//		Observable.interval(50)
+	//			.window((closingNotifier) => {
+	//				throw new Error(closingNotifier)
+	//				let source:Observable<Observable<number>>;
+	//				return source;
+	//			})
+	//			.take(3)
+	//			.flatMap(x => x.toArray())
+	//	);
+	//});
+
 	// Observable.windowCount
+	it('windowCount', (done) => {
+		// 특정 갯수 단위로 잘라낸다
+		subscribeSubject(done,
+			Observable.range(1, 6)
+				.windowCount(3, 3)
+		);
+		/*
+		 Child 1 ← Number at 1:1
+		 Child 2 ← Number at 0:1
+		 Child 3 ← Number at 0:1
+		 Child Complete
+		 Child 4 ← Number at 1:2
+		 Child 5 ← Number at 0:2
+		 Child 6 ← Number at 0:2
+		 Child Complete
+		 // TODO 이곳에 빈값이 들어가는 현상이 나타난다
+		 Child Complete
+		 Complete
+		 */
+	});
+
 	// Observable.windowTime
+	it('windowTime', (done) => {
+		// 특정 시간 단위로 잘라낸다
+		subscribeSubject(done,
+			Observable.interval(100)
+				.windowTime(500)
+				.take(4)
+		);
+	})
+
 	// Observable.windowToggle
+	it('windowToggle', (done) => {
+		// TODO 뭔 기능인지 모르겠다
+		subscribeSubject(done,
+			Observable.interval(1000)
+				.windowToggle(Observable.timer(5000))
+				.take(4)
+		);
+	})
+
 	// Observable.windowWhen
-});
+	it('windowWhen', (done) =>
+		// TODO 정확한 사용법은 모르겠다
+		subscribeSubject(done,
+			Observable.interval(1000)
+				.windowWhen(() => Observable.interval(2000))
+				.take(10)
+		);
+})
+})
+;

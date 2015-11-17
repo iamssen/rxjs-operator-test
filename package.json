@@ -1,7 +1,7 @@
 {
   "name": "rsjx",
   "scripts": {
-    "test": "tsc && mocha -f 'retry'"
+    "test": "tsc && mocha -f 'windowWhen'"
   },
   "dependencies": {
     "@reactivex/rxjs": "^5.0.0-alpha.10",
